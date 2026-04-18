@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SUPPLY CHAIN INTELLIGENCE TERMINAL</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=IBM+Plex+Mono:wght@300;400;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #050d1a;
+    --bg2: #07111f;
+    --card: #0a1828;
+    --card2: #0d1f30;
+    --border: #1a3050;
+    --border2: #0f2035;
+    --accent: #00d4ff;
+    --accent2: #0099cc;
+    --accent3: #005577;
+    --up: #00ff88;
+    --down: #ff3355;
+    --warn: #ffaa00;
+    --text: #c8dff0;
+    --text2: #7a9db8;
+    --text3: #3a607a;
+    --glow: rgba(0, 212, 255, 0.15);
+    --risk1: #00ff88;
+    --risk2: #44ff66;
+    --risk3: #88ff44;
+    --risk4: #ccff00;
+    --risk5: #ffee00;
+    --risk6: #ffaa00;
+    --risk7: #ff7700;
+    --risk8: #ff4400;
+    --risk9: #ff2200;
+    --risk10: #ff0033;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    overflow: hidden;
+    height: 100vh;
+  }
+  /* SCANLINE EFFECT */
+  body::before {
+    content: '';
+    position: fixed; top:0; left:0; right:0; bottom:0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+    pointer-events: none; z-index: 9999;
+  }
+  /* HEADER */
+  #header {
+    background: linear-gradient(90deg, #050d1a 0%, #071522 40%, #050d1a 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 0 16px;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    overflow: hidden;
+  }
+  #header::after {
+    content: '';
+    position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    animation: scanh 4s linear infinite;
+  }
+  @keyframes scanh { 0%{opacity:0.3} 50%{opacity:1} 100%{opacity:0.3} }
+  .logo {
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    font-weight: 900;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-shadow: 0 0 20px rgba(0,212,255,0.5);
+  }
+  .logo span { color: var(--text2); font-weight: 400; font-size: 10px; }
+  #clock {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    text-shadow: 0 0 10px rgba(0,212,255,0.4);
+    letter-spacing: 1px;
+  }
+  #status-bar {
+    display: flex; gap: 16px; align-items: center;
+  }
+  .status-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--up);
+    box-shadow: 0 0 8px var(--up);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .status-text { font-size: 10px; color: var(--text2); letter-spacing: 1px; }
+  /* SEARCH BAR */
+  #search-wrap {
+    padding: 8px 12px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border2);
+    position: relative;
+  }
+  #search {
+    width: 100%;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--accent);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    padding: 7px 12px 7px 32px;
+    outline: none;
+    letter-spacing: 1px;
+    transition: border-color 0.2s;
+  }
+  #search:focus { border-color: var(--accent); box-shadow: 0 0 12px var(--glow); }
+  #search::placeholder { color: var(--text3); }
+  .search-icon {
+    position: absolute; left: 22px; top: 50%; transform: translateY(-50%);
+    color: var(--text3); font-size: 12px;
+  }
+  #autocomplete {
+    position: absolute; top: 100%; left: 12px; right: 12px;
+    background: var(--card2); border: 1px solid var(--accent3);
+    z-index: 100; max-height: 200px; overflow-y: auto;
+    display: none;
+  }
+  .ac-item {
+    padding: 7px 12px; cursor: pointer;
+    display: flex; align-items: center; gap: 8px;
+    border-bottom: 1px solid var(--border2);
+    transition: background 0.1s;
+  }
+  .ac-item:hover { background: var(--accent3); }
+  .ac-ticker { color: var(--accent); font-weight: 700; min-width: 80px; }
+  .ac-name { color: var(--text2); }
+  /* LAYOUT */
+  #main {
+    display: flex;
+    height: calc(100vh - 52px - 52px);
+  }
+  /* SIDEBAR */
+  #sidebar {
+    width: 300px;
+    min-width: 300px;
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    background: var(--bg2);
+  }
+  #sidebar-header {
+    padding: 8px 12px;
+    background: var(--card2);
+    border-bottom: 1px solid var(--border2);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .sec-title { font-size: 10px; color: var(--text2); letter-spacing: 2px; text-transform: uppercase; }
+  #company-count { font-size: 10px; color: var(--accent); }
+  #company-list {
+    overflow-y: auto; flex: 1;
+  }
+  #company-list::-webkit-scrollbar { width: 4px; }
+  #company-list::-webkit-scrollbar-track { background: var(--bg2); }
+  #company-list::-webkit-scrollbar-thumb { background: var(--accent3); }
+  .co-item {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border2);
+    cursor: pointer;
+    transition: background 0.15s;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 8px;
+    align-items: center;
+  }
+  .co-item:hover { background: rgba(0,212,255,0.05); }
+  .co-item.active {
+    background: rgba(0,212,255,0.1);
+    border-left: 2px solid var(--accent);
+  }
+  .co-left { display: flex; flex-direction: column; gap: 3px; }
+  .co-ticker { font-family: 'Space Mono', monospace; font-size: 11px; font-weight: 700; color: var(--accent); letter-spacing: 1px; }
+  .co-name { font-size: 10px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
+  .co-right { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+  .co-price { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--text); }
+  .co-change { font-size: 10px; }
+  .co-risk { display: flex; flex-direction: column; gap: 2px; align-items: center; }
+  /* RISK BAR */
+  .risk-bar {
+    display: flex; gap: 1.5px;
+  }
+  .rb { width: 5px; height: 9px; background: var(--border); border-radius: 1px; }
+  .rb.filled { }
+  .risk-label { font-size: 9px; color: var(--text3); }
+  /* DETAIL PANEL */
+  #detail {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    background: var(--bg);
+  }
+  #detail::-webkit-scrollbar { width: 4px; }
+  #detail::-webkit-scrollbar-track { background: var(--bg); }
+  #detail::-webkit-scrollbar-thumb { background: var(--accent3); }
+  #welcome {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 100%;
+    gap: 16px;
+  }
+  .welcome-logo {
+    font-family: 'Orbitron', monospace;
+    font-size: 28px; font-weight: 900;
+    color: var(--accent);
+    text-shadow: 0 0 40px rgba(0,212,255,0.4);
+    letter-spacing: 6px;
+  }
+  .welcome-sub { color: var(--text3); letter-spacing: 3px; font-size: 11px; }
+  .welcome-hint { color: var(--text2); font-size: 11px; margin-top: 20px; border: 1px solid var(--border); padding: 12px 24px; letter-spacing: 1px; }
+  /* DETAIL HEADER */
+  #co-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    margin-bottom: 16px; flex-wrap: wrap; gap: 12px;
+  }
+  .co-detail-name {
+    font-family: 'Orbitron', monospace;
+    font-size: 18px; font-weight: 700;
+    color: var(--text);
+    letter-spacing: 2px;
+  }
+  .co-detail-ticker {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    background: var(--accent3);
+    color: var(--accent);
+    padding: 2px 10px;
+    border: 1px solid var(--accent);
+    letter-spacing: 2px;
+    display: inline-block;
+    margin-top: 4px;
+  }
+  .co-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .badge {
+    font-size: 9px; padding: 2px 8px;
+    border: 1px solid; letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .badge-sector { border-color: var(--accent3); color: var(--accent2); }
+  .badge-region { border-color: #1a4040; color: #00aaaa; }
+  .badge-disc-PARTIAL_PUBLIC { border-color: #1a4a00; color: var(--up); }
+  .badge-disc-LIMITED_PUBLIC { border-color: #4a3000; color: var(--warn); }
+  .badge-disc-UNKNOWN { border-color: #4a0000; color: var(--down); }
+  /* PRICE BLOCK */
+  .price-block {
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 14px 18px;
+    margin-bottom: 14px;
+    display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap;
+  }
+  .price-main {
+    font-family: 'Space Mono', monospace;
+    font-size: 32px; font-weight: 700;
+    color: var(--text);
+    letter-spacing: -1px;
+  }
+  .price-change {
+    font-family: 'Space Mono', monospace;
+    font-size: 16px; font-weight: 700;
+  }
+  .price-currency { font-size: 12px; color: var(--text3); }
+  .price-label { font-size: 10px; color: var(--text3); letter-spacing: 1px; }
+  /* METRICS GRID */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .metric-card {
+    background: var(--card);
+    border: 1px solid var(--border2);
+    padding: 10px 12px;
+  }
+  .metric-label { font-size: 9px; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 5px; }
+  .metric-value { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--text); }
+  /* RISK SECTION */
+  .risk-section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+  .risk-section-title { font-size: 10px; color: var(--text2); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px; border-bottom: 1px solid var(--border2); padding-bottom: 8px; }
+  .risk-row {
+    display: flex; align-items: center; gap: 14px; margin-bottom: 10px; flex-wrap: wrap;
+  }
+  .risk-row-label { font-size: 11px; color: var(--text2); min-width: 160px; }
+  .risk-bar-lg { display: flex; gap: 3px; }
+  .rbl { width: 18px; height: 16px; background: var(--border); border-radius: 2px; transition: background 0.3s; }
+  .risk-score-lg { font-family: 'Space Mono', monospace; font-size: 16px; font-weight: 700; min-width: 30px; }
+  .risk-factors { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+  .risk-factor { background: var(--card2); border: 1px solid var(--border2); padding: 4px 10px; font-size: 10px; color: var(--text2); }
+  .risk-factor span { color: var(--accent); }
+  /* TABS */
+  .tabs {
+    display: flex; border-bottom: 1px solid var(--border); margin-bottom: 14px; gap: 0;
+  }
+  .tab {
+    padding: 8px 18px;
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    cursor: pointer; color: var(--text3);
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  /* SUPPLY CHAIN NODES */
+  .sc-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 10px;
+  }
+  .sc-node {
+    background: var(--card);
+    border: 1px solid var(--border2);
+    padding: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .sc-node::before {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0; width: 2px;
+  }
+  .sc-node:hover { border-color: var(--accent); background: var(--card2); transform: translateY(-1px); }
+  .sc-node-ticker { font-family: 'Space Mono', monospace; font-size: 12px; font-weight: 700; color: var(--accent); letter-spacing: 1px; }
+  .sc-node-name { font-size: 10px; color: var(--text2); margin: 3px 0; }
+  .sc-node-role { font-size: 9px; padding: 1px 6px; border: 1px solid var(--accent3); color: var(--accent2); display: inline-block; margin-bottom: 6px; letter-spacing: 1px; }
+  .sc-node-price { font-family: 'Space Mono', monospace; font-size: 13px; font-weight: 700; }
+  .sc-node-change { font-size: 10px; margin-left: 6px; }
+  .sc-node-risk-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+  .sc-node-risk-label { font-size: 10px; }
+  .in-db { cursor: pointer; }
+  .in-db .sc-node-ticker::after { content: ' ↗'; font-size: 9px; opacity: 0.6; }
+  /* SEC FILINGS */
+  .sec-section { }
+  .sec-item {
+    background: var(--card);
+    border: 1px solid var(--border2);
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    flex-wrap: wrap;
+  }
+  .sec-item-left { }
+  .sec-filing-type { font-size: 11px; font-weight: 700; color: var(--accent); letter-spacing: 1px; }
+  .sec-filing-desc { font-size: 10px; color: var(--text2); margin-top: 3px; }
+  .sec-btn {
+    background: transparent;
+    border: 1px solid var(--accent3);
+    color: var(--accent);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    padding: 5px 12px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.2s;
+  }
+  .sec-btn:hover { background: var(--accent3); }
+  .sec-disc-banner {
+    background: var(--card2); border: 1px solid var(--border);
+    padding: 12px; margin-bottom: 12px; font-size: 11px; color: var(--text2); line-height: 1.6;
+  }
+  .sec-disc-banner strong { color: var(--accent); }
+  /* LOADING SPINNER */
+  .loading {
+    display: inline-block; width: 10px; height: 10px;
+    border: 2px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .price-loading { color: var(--text3); font-size: 11px; }
+  /* TICKER TAPE */
+  #ticker-tape {
+    height: 26px;
+    background: var(--card2);
+    border-top: 1px solid var(--border);
+    overflow: hidden;
+    position: relative;
+  }
+  #tape-inner {
+    display: flex; align-items: center;
+    height: 100%;
+    white-space: nowrap;
+    animation: scroll-left 120s linear infinite;
+    gap: 0;
+  }
+  @keyframes scroll-left {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  .tape-item {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 0 16px;
+    border-right: 1px solid var(--border2);
+    font-size: 10px;
+    font-family: 'Space Mono', monospace;
+  }
+  .tape-ticker { color: var(--accent); font-weight: 700; }
+  .tape-price { color: var(--text); }
+  .tape-up { color: var(--up); }
+  .tape-down { color: var(--down); }
+  /* ERROR */
+  .err { color: var(--down); font-size: 10px; }
+  /* REFRESH INDICATOR */
+  #refresh-bar {
+    height: 2px;
+    background: var(--accent3);
+    position: fixed; top: 0; left: 0;
+    transition: width 1s linear;
+  }
+  /* UP/DOWN COLORS */
+  .up { color: var(--up); }
+  .down { color: var(--down); }
+  .flat { color: var(--text2); }
+  /* EMPTY STATE */
+  .empty-state {
+    padding: 24px; text-align: center; color: var(--text3); font-size: 11px;
+    letter-spacing: 1px;
+  }
+  /* NO DB BADGE */
+  .no-db { opacity: 0.7; }
+  .no-db .sc-node-ticker::after { display: none; }
+  .sc-section-header {
+    font-size: 10px; color: var(--text3); letter-spacing: 2px;
+    text-transform: uppercase; margin: 14px 0 8px;
+    border-bottom: 1px solid var(--border2); padding-bottom: 6px;
+  }
+</style>
+</head>
+<body>
+
+<div id="refresh-bar" style="width:0%"></div>
+
+<!-- HEADER -->
+<div id="header">
+  <div>
+    <div class="logo">SUPPLY CHAIN TERMINAL <span>// TOP 100 GLOBAL</span></div>
+  </div>
+  <div id="status-bar">
+    <div class="status-dot"></div>
+    <div class="status-text">LIVE</div>
+    <div id="clock">--:--:-- UTC</div>
+  </div>
+</div>
+
+<!-- SEARCH -->
+<div id="search-wrap">
+  <span class="search-icon">⌕</span>
+  <input id="search" type="text" placeholder="SEARCH COMPANY OR TICKER..." autocomplete="off">
+  <div id="autocomplete"></div>
+</div>
+
+<!-- MAIN LAYOUT -->
+<div id="main">
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <div id="sidebar-header">
+      <span class="sec-title">Companies</span>
+      <span id="company-count">100</span>
+    </div>
+    <div id="company-list"></div>
+  </div>
+  <!-- DETAIL PANEL -->
+  <div id="detail">
+    <div id="welcome">
+      <div class="welcome-logo">SCT</div>
+      <div class="welcome-sub">SUPPLY CHAIN INTELLIGENCE TERMINAL</div>
+      <div class="welcome-hint">← SELECT A COMPANY TO VIEW SUPPLY CHAIN ANALYSIS</div>
+    </div>
+    <div id="co-view" style="display:none"></div>
+  </div>
+</div>
+
+<!-- TICKER TAPE -->
+<div id="ticker-tape"><div id="tape-inner"></div></div>
+
+<script>
+// ============================================================
+// DATABASE — ALL 100 COMPANIES
+// Fields: n=name, s=sector, r=region, d=disclosure,
+//   sup=[[name,ticker,role]], cus=[[name,ticker,role]]
+// ============================================================
+const DB = {
+  "NVDA":  {n:"NVIDIA",              s:"Semiconductors/AI",       r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[["TSMC","TSM","Foundry"],["SK Hynix","000660.KS","HBM Memory"],["Micron","MU","Memory"],["Samsung Elec","005930.KS","Memory"]],
+    cus:[["Microsoft","MSFT","Cloud/AI"],["Amazon","AMZN","Cloud/AI"],["Alphabet","GOOG","Cloud/AI"],["Meta","META","Cloud/AI"],["Oracle","ORCL","Cloud"]]},
+  "GOOG":  {n:"Alphabet",            s:"Internet/Cloud",          r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[["NVIDIA","NVDA","AI Chips"],["Broadcom","AVGO","Custom Silicon"],["TSMC","TSM","Foundry"]],
+    cus:[]},
+  "AAPL":  {n:"Apple",               s:"Consumer Technology",     r:"USA",         d:"PARTIAL_PUBLIC",
+    sup:[["TSMC","TSM","Chips"],["Foxconn","2317.TW","Assembly"],["Broadcom","AVGO","Chips"],["Sony","SONY","Camera"],["Pegatron","4938.TW","Assembly"],["Luxshare","002475.SZ","Assembly"]],
+    cus:[]},
+  "MSFT":  {n:"Microsoft",           s:"Software/Cloud",          r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[["NVIDIA","NVDA","AI Chips"],["AMD","AMD","Chips"],["Intel","INTC","CPUs"],["TSMC","TSM","Foundry"]],
+    cus:[]},
+  "AMZN":  {n:"Amazon",              s:"E-commerce/Cloud",        r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[["NVIDIA","NVDA","AI Chips"],["AMD","AMD","Chips"],["Broadcom","AVGO","Networking"],["UPS","UPS","Logistics"],["FedEx","FDX","Logistics"]],
+    cus:[]},
+  "AVGO":  {n:"Broadcom",            s:"Semiconductors/Infra",    r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[["TSMC","TSM","Foundry"]],
+    cus:[["Apple","AAPL","Chips"],["Alphabet","GOOG","Custom AI"],["Meta","META","Networking"],["Oracle","ORCL","Networking"]]},
+  "TSM":   {n:"TSMC",                s:"Semiconductors/Foundry",  r:"Taiwan",      d:"PARTIAL_PUBLIC",
+    sup:[["ASML","ASML","EUV Litho"],["Applied Materials","AMAT","Fab Equip"],["Lam Research","LRCX","Etch/Dep"],["KLA","KLAC","Inspection"]],
+    cus:[["NVIDIA","NVDA","AI Chips"],["Apple","AAPL","SoC"],["AMD","AMD","CPUs/GPUs"],["Broadcom","AVGO","Custom"],["Qualcomm","QCOM","Mobile"]]},
+  "2222.SR":{n:"Saudi Aramco",       s:"Oil & Gas",               r:"Saudi Arabia",d:"LIMITED_PUBLIC",
+    sup:[["Schlumberger","SLB","Oilfield Svcs"],["Halliburton","HAL","Oilfield Svcs"],["Baker Hughes","BKR","Oilfield Svcs"]],
+    cus:[]},
+  "META":  {n:"Meta Platforms",      s:"Internet/Advertising",    r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[["NVIDIA","NVDA","AI Chips"],["AMD","AMD","Chips"],["Broadcom","AVGO","Networking"]],
+    cus:[]},
+  "TSLA":  {n:"Tesla",               s:"EV/Energy",               r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[["CATL","300750.SZ","Batteries"],["Panasonic","PCRFY","Batteries"],["NVIDIA","NVDA","Chips"],["Texas Instruments","TXN","Analog"]],
+    cus:[]},
+  "BRK-B": {n:"Berkshire Hathaway",  s:"Conglomerate/Insurance",  r:"USA",         d:"UNKNOWN",
+    sup:[],cus:[]},
+  "WMT":   {n:"Walmart",             s:"Retail",                  r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[["P&G","PG","Consumer Goods"],["Coca-Cola","KO","Beverages"],["PepsiCo","PEP","Beverages"],["Unilever","UL","Consumer Goods"],["Kimberly-Clark","KMB","Consumer Goods"],["General Mills","GIS","Food"],["Mondelez","MDLZ","Food"]],
+    cus:[]},
+  "005930.KS":{n:"Samsung Electronics",s:"Electronics/Semis",    r:"South Korea", d:"LIMITED_PUBLIC",
+    sup:[["ASML","ASML","EUV Litho"],["Applied Materials","AMAT","Fab Equip"],["Lam Research","LRCX","Etch/Dep"],["KLA","KLAC","Inspection"]],
+    cus:[]},
+  "JPM":   {n:"JPMorgan Chase",      s:"Banking",                 r:"USA",         d:"UNKNOWN",
+    sup:[["Microsoft","MSFT","IT"],["Oracle","ORCL","IT"],["Visa","V","Payments"],["Mastercard","MA","Payments"]],
+    cus:[]},
+  "LLY":   {n:"Eli Lilly",           s:"Pharma",                  r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[],
+    cus:[["McKesson","MCK","Wholesale"],["AmerisourceBergen","CAH","Wholesale"],["CVS","CVS","Pharmacy"]]},
+  "V":     {n:"Visa",                s:"Payments",                r:"USA",         d:"UNKNOWN",
+    sup:[["JPMorgan","JPM","Issuer"],["Bank of America","BAC","Issuer"],["Citigroup","C","Issuer"]],
+    cus:[]},
+  "XOM":   {n:"Exxon Mobil",         s:"Oil & Gas",               r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[["Schlumberger","SLB","Oilfield Svcs"],["Halliburton","HAL","Oilfield Svcs"],["Baker Hughes","BKR","Oilfield Svcs"]],
+    cus:[]},
+  "TCEHY": {n:"Tencent",             s:"Internet/Gaming",         r:"China",       d:"UNKNOWN",
+    sup:[["NVIDIA","NVDA","AI Chips"],["TSMC","TSM","Foundry"]],
+    cus:[]},
+  "ASML":  {n:"ASML",                s:"Semiconductor Equipment", r:"Netherlands", d:"LIMITED_PUBLIC",
+    sup:[],
+    cus:[["TSMC","TSM","EUV"],["Samsung Elec","005930.KS","EUV"],["Intel","INTC","EUV"],["SK Hynix","000660.KS","EUV"],["Micron","MU","EUV"]]},
+  "JNJ":   {n:"Johnson & Johnson",   s:"Healthcare",              r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[],
+    cus:[["McKesson","MCK","Wholesale"],["Cardinal Health","CAH","Wholesale"],["CVS","CVS","Pharmacy"]]},
+  "000660.KS":{n:"SK Hynix",         s:"Semiconductors/Memory",   r:"South Korea", d:"LIMITED_PUBLIC",
+    sup:[["ASML","ASML","EUV Litho"],["Applied Materials","AMAT","Fab Equip"],["Lam Research","LRCX","Etch/Dep"],["KLA","KLAC","Inspection"]],
+    cus:[["NVIDIA","NVDA","HBM"],["Apple","AAPL","Memory"],["Dell","DELL","Memory"]]},
+  "MU":    {n:"Micron Technology",   s:"Semiconductors/Memory",   r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[["ASML","ASML","EUV Litho"],["Applied Materials","AMAT","Fab Equip"],["Lam Research","LRCX","Etch/Dep"],["KLA","KLAC","Inspection"]],
+    cus:[["NVIDIA","NVDA","HBM"],["Dell","DELL","Memory"],["HP","HPQ","Memory"]]},
+  "ORCL":  {n:"Oracle",              s:"Software/Cloud",          r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[["NVIDIA","NVDA","AI Chips"],["AMD","AMD","Chips"],["Broadcom","AVGO","Networking"]],
+    cus:[]},
+  "MA":    {n:"Mastercard",          s:"Payments",                r:"USA",         d:"UNKNOWN",
+    sup:[["JPMorgan","JPM","Issuer"],["Bank of America","BAC","Issuer"]],
+    cus:[]},
+  "AMD":   {n:"AMD",                 s:"Semiconductors",          r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[["TSMC","TSM","Foundry"]],
+    cus:[["Microsoft","MSFT","Cloud/Gaming"],["Sony","SONY","Gaming"],["Dell","DELL","PC/Server"],["HP","HPQ","PC"]]},
+  "COST":  {n:"Costco",              s:"Retail",                  r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[["P&G","PG","Consumer Goods"],["PepsiCo","PEP","Beverages"],["Coca-Cola","KO","Beverages"],["Kimberly-Clark","KMB","Consumer Goods"]],
+    cus:[]},
+  "1398.HK":{n:"ICBC",              s:"Banking",                 r:"China",       d:"UNKNOWN",
+    sup:[["IBM","IBM","IT"],["Oracle","ORCL","IT"]],
+    cus:[]},
+  "NFLX":  {n:"Netflix",             s:"Streaming",               r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[["Amazon AWS","AMZN","Cloud Infra"],["Apple","AAPL","Platform"]],
+    cus:[]},
+  "BAC":   {n:"Bank of America",     s:"Banking",                 r:"USA",         d:"UNKNOWN",
+    sup:[["Visa","V","Payments"],["Mastercard","MA","Payments"],["Microsoft","MSFT","IT"]],
+    cus:[]},
+  "CAT":   {n:"Caterpillar",         s:"Industrials",             r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[["Cummins","CMI","Engines"]],
+    cus:[]},
+  "ABBV":  {n:"AbbVie",              s:"Pharma",                  r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[],
+    cus:[["McKesson","MCK","Wholesale"],["Cardinal Health","CAH","Wholesale"],["CVS","CVS","Pharmacy"]]},
+  "CVX":   {n:"Chevron",             s:"Oil & Gas",               r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[["Schlumberger","SLB","Oilfield Svcs"],["Halliburton","HAL","Oilfield Svcs"],["Baker Hughes","BKR","Oilfield Svcs"]],
+    cus:[]},
+  "601288.SS":{n:"Agricultural Bank of China",s:"Banking",       r:"China",       d:"UNKNOWN",
+    sup:[["IBM","IBM","IT"],["Oracle","ORCL","IT"]],cus:[]},
+  "601939.SS":{n:"China Construction Bank",s:"Banking",          r:"China",       d:"UNKNOWN",
+    sup:[["IBM","IBM","IT"],["Oracle","ORCL","IT"]],cus:[]},
+  "PLTR":  {n:"Palantir",            s:"Software/Data Analytics", r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[["Amazon","AMZN","Cloud"],["Microsoft","MSFT","Cloud"],["Alphabet","GOOG","Cloud"],["NVIDIA","NVDA","AI"]],
+    cus:[]},
+  "HD":    {n:"Home Depot",          s:"Retail",                  r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[["Stanley Black & Decker","SWK","Tools"],["Masco","MAS","Home Prod"],["Whirlpool","WHR","Appliances"]],
+    cus:[]},
+  "INTC":  {n:"Intel",               s:"Semiconductors",          r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[["ASML","ASML","EUV Litho"],["Applied Materials","AMAT","Fab Equip"],["Lam Research","LRCX","Etch/Dep"],["KLA","KLAC","Inspection"]],
+    cus:[["Dell","DELL","PCs/Servers"],["HP","HPQ","PCs"],["Amazon","AMZN","Cloud"]]},
+  "PG":    {n:"Procter & Gamble",    s:"Consumer Staples",        r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[],
+    cus:[["Walmart","WMT","Retail"],["Costco","COST","Retail"],["Target","TGT","Retail"],["Amazon","AMZN","E-commerce"]]},
+  "CSCO":  {n:"Cisco",               s:"Networking",              r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[["TSMC","TSM","Chips"],["Jabil","JBL","Contract Mfg"],["Flex","FLEX","Contract Mfg"]],
+    cus:[]},
+  "RO.SW": {n:"Roche",               s:"Pharma/Diagnostics",      r:"Switzerland", d:"LIMITED_PUBLIC",
+    sup:[["Danaher","DHR","Instruments"],["Thermo Fisher","TMO","Bioprocess"]],
+    cus:[]},
+  "BABA":  {n:"Alibaba",             s:"E-commerce/Cloud",        r:"China",       d:"UNKNOWN",
+    sup:[["NVIDIA","NVDA","AI Chips"]],
+    cus:[]},
+  "LRCX":  {n:"Lam Research",        s:"Semiconductor Equipment", r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[],
+    cus:[["TSMC","TSM","Etch/Dep"],["Samsung Elec","005930.KS","Etch/Dep"],["Intel","INTC","Etch/Dep"],["Micron","MU","Etch/Dep"],["SK Hynix","000660.KS","Etch/Dep"]]},
+  "0857.HK":{n:"PetroChina",         s:"Oil & Gas",               r:"China",       d:"LIMITED_PUBLIC",
+    sup:[["Schlumberger","SLB","Oilfield Svcs"],["Halliburton","HAL","Oilfield Svcs"],["Baker Hughes","BKR","Oilfield Svcs"]],
+    cus:[]},
+  "KO":    {n:"Coca-Cola",           s:"Beverages",               r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[],
+    cus:[["Walmart","WMT","Retail"],["Costco","COST","Retail"],["McDonald's","MCD","Foodservice"]]},
+  "GE":    {n:"General Electric",    s:"Industrials/Aerospace",   r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[["RTX","RTX","Aerospace Comp"]],
+    cus:[]},
+  "HSBC":  {n:"HSBC",                s:"Banking",                 r:"UK",          d:"UNKNOWN",
+    sup:[["IBM","IBM","IT"],["Oracle","ORCL","IT"],["Visa","V","Payments"]],
+    cus:[]},
+  "AZN":   {n:"AstraZeneca",         s:"Pharma",                  r:"UK",          d:"LIMITED_PUBLIC",
+    sup:[],
+    cus:[["McKesson","MCK","Wholesale"],["Cardinal Health","CAH","Wholesale"],["CVS","CVS","Pharmacy"]]},
+  "AMAT":  {n:"Applied Materials",   s:"Semiconductor Equipment", r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[],
+    cus:[["TSMC","TSM","Fab Equip"],["Samsung Elec","005930.KS","Fab Equip"],["Intel","INTC","Fab Equip"],["Micron","MU","Fab Equip"],["SK Hynix","000660.KS","Fab Equip"]]},
+  "MS":    {n:"Morgan Stanley",      s:"Financials",              r:"USA",         d:"UNKNOWN",
+    sup:[["IBM","IBM","IT"],["Oracle","ORCL","IT"]],
+    cus:[]},
+  "300750.SZ":{n:"CATL",             s:"Batteries",               r:"China",       d:"LIMITED_PUBLIC",
+    sup:[["Albemarle","ALB","Lithium"],["SQM","SQM","Lithium"]],
+    cus:[["Tesla","TSLA","EV Batteries"],["BMW","BMWYY","EV Batteries"],["VW","VWAGY","EV Batteries"]]},
+  "UNH":   {n:"UnitedHealth",        s:"Healthcare/Insurance",    r:"USA",         d:"UNKNOWN",
+    sup:[["McKesson","MCK","Pharma"],["Cardinal Health","CAH","Pharma"],["CVS","CVS","Pharmacy"]],
+    cus:[]},
+  "MRK":   {n:"Merck",               s:"Pharma",                  r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[],
+    cus:[["McKesson","MCK","Wholesale"],["Cardinal Health","CAH","Wholesale"]]},
+  "NVS":   {n:"Novartis",            s:"Pharma",                  r:"Switzerland", d:"LIMITED_PUBLIC",
+    sup:[],
+    cus:[["McKesson","MCK","Wholesale"],["Cardinal Health","CAH","Wholesale"]]},
+  "MC.PA": {n:"LVMH",                s:"Luxury Goods",            r:"France",      d:"LIMITED_PUBLIC",
+    sup:[],cus:[]},
+  "TM":    {n:"Toyota",              s:"Autos",                   r:"Japan",       d:"LIMITED_PUBLIC",
+    sup:[["Denso","6902.T","Components"],["Aisin","7259.T","Components"],["Toyota Ind","6201.T","Equipment"]],
+    cus:[]},
+  "GS":    {n:"Goldman Sachs",       s:"Financials",              r:"USA",         d:"UNKNOWN",
+    sup:[["IBM","IBM","IT"],["Oracle","ORCL","IT"]],
+    cus:[]},
+  "601988.SS":{n:"Bank of China",    s:"Banking",                 r:"China",       d:"UNKNOWN",
+    sup:[["IBM","IBM","IT"],["Oracle","ORCL","IT"]],cus:[]},
+  "GEV":   {n:"GE Vernova",          s:"Energy Equipment",        r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[],
+    cus:[["NextEra Energy","NEE","Grid Equip"],["Duke Energy","DUK","Grid Equip"]]},
+  "RTX":   {n:"RTX",                 s:"Aerospace/Defense",       r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[["Honeywell","HON","Avionics"]],
+    cus:[["Boeing","BA","Defense"],["Airbus","AIR","Defense"]]},
+  "NESN.SW":{n:"Nestlé",             s:"Consumer Staples",        r:"Switzerland", d:"LIMITED_PUBLIC",
+    sup:[],
+    cus:[["Walmart","WMT","Retail"],["Costco","COST","Retail"]]},
+  "600519.SS":{n:"Kweichow Moutai",  s:"Beverages",               r:"China",       d:"LIMITED_PUBLIC",
+    sup:[],cus:[]},
+  "WFC":   {n:"Wells Fargo",         s:"Banking",                 r:"USA",         d:"UNKNOWN",
+    sup:[["Visa","V","Payments"],["Mastercard","MA","Payments"],["IBM","IBM","IT"]],
+    cus:[]},
+  "RY":    {n:"Royal Bank of Canada",s:"Banking",                 r:"Canada",      d:"UNKNOWN",
+    sup:[["Visa","V","Payments"],["Mastercard","MA","Payments"],["IBM","IBM","IT"]],
+    cus:[]},
+  "SHEL":  {n:"Shell",               s:"Oil & Gas",               r:"UK",          d:"LIMITED_PUBLIC",
+    sup:[["Schlumberger","SLB","Oilfield Svcs"],["Halliburton","HAL","Oilfield Svcs"],["Baker Hughes","BKR","Oilfield Svcs"]],
+    cus:[]},
+  "PM":    {n:"Philip Morris",       s:"Tobacco/Consumer",        r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[],
+    cus:[["Walmart","WMT","Retail"],["Costco","COST","Retail"]]},
+  "IBM":   {n:"IBM",                 s:"IT Services/Software",    r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[["NVIDIA","NVDA","AI Chips"],["AMD","AMD","Chips"],["Intel","INTC","CPUs"]],
+    cus:[]},
+  "KLAC":  {n:"KLA",                 s:"Semiconductor Equipment", r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[],
+    cus:[["TSMC","TSM","Inspection"],["Samsung Elec","005930.KS","Inspection"],["Intel","INTC","Inspection"],["Micron","MU","Inspection"],["SK Hynix","000660.KS","Inspection"]]},
+  "IHC.AE":{n:"International Holding",s:"Conglomerate",          r:"UAE",         d:"UNKNOWN",
+    sup:[],cus:[]},
+  "C":     {n:"Citigroup",           s:"Banking",                 r:"USA",         d:"UNKNOWN",
+    sup:[["Visa","V","Payments"],["Mastercard","MA","Payments"],["IBM","IBM","IT"]],
+    cus:[]},
+  "PRX.AS":{n:"Prosus",              s:"Internet/Investment",     r:"Netherlands", d:"UNKNOWN",
+    sup:[],cus:[]},
+  "LIN":   {n:"Linde",               s:"Industrial Gases",        r:"UK",          d:"LIMITED_PUBLIC",
+    sup:[],cus:[]},
+  "AXP":   {n:"American Express",    s:"Payments",                r:"USA",         d:"UNKNOWN",
+    sup:[["JPMorgan","JPM","Banking"],["IBM","IBM","IT"]],
+    cus:[]},
+  "0941.HK":{n:"China Mobile",       s:"Telecom",                 r:"China",       d:"LIMITED_PUBLIC",
+    sup:[["Ericsson","ERIC","Network Equip"],["Nokia","NOK","Network Equip"]],
+    cus:[["Apple","AAPL","Handsets"]]},
+  "OR.PA": {n:"L'Oréal",             s:"Beauty",                  r:"France",      d:"LIMITED_PUBLIC",
+    sup:[],
+    cus:[["Walmart","WMT","Retail"],["Amazon","AMZN","E-commerce"]]},
+  "SIE.DE":{n:"Siemens",             s:"Industrials",             r:"Germany",     d:"LIMITED_PUBLIC",
+    sup:[["Amphenol","APH","Connectors"],["Analog Devices","ADI","Semis"]],
+    cus:[]},
+  "MCD":   {n:"McDonald's",          s:"Restaurants",             r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[["Coca-Cola","KO","Beverages"],["Sysco","SYY","Food Distribution"]],
+    cus:[]},
+  "TMUS":  {n:"T-Mobile US",         s:"Telecom",                 r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[["Ericsson","ERIC","Network Equip"],["Nokia","NOK","Network Equip"],["Apple","AAPL","Handsets"]],
+    cus:[]},
+  "RMS.PA":{n:"Hermès",              s:"Luxury Goods",            r:"France",      d:"LIMITED_PUBLIC",
+    sup:[],cus:[]},
+  "PEP":   {n:"PepsiCo",             s:"Consumer Staples",        r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[],
+    cus:[["Walmart","WMT","Retail"],["Costco","COST","Retail"]]},
+  "CBA.AX":{n:"Commonwealth Bank",   s:"Banking",                 r:"Australia",   d:"UNKNOWN",
+    sup:[["IBM","IBM","IT"],["Oracle","ORCL","IT"],["Visa","V","Payments"]],
+    cus:[]},
+  "SAP":   {n:"SAP",                 s:"Software",                r:"Germany",     d:"LIMITED_PUBLIC",
+    sup:[["Microsoft","MSFT","Cloud"],["Amazon","AMZN","Cloud"],["Alphabet","GOOG","Cloud"]],
+    cus:[]},
+  "TXN":   {n:"Texas Instruments",   s:"Semiconductors",          r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[["ASML","ASML","Litho"],["Applied Materials","AMAT","Fab Equip"],["Lam Research","LRCX","Etch/Dep"]],
+    cus:[["Apple","AAPL","Analog"],["Tesla","TSLA","Auto"]]},
+  "MUFG":  {n:"Mitsubishi UFJ",      s:"Banking",                 r:"Japan",       d:"UNKNOWN",
+    sup:[["IBM","IBM","IT"],["Oracle","ORCL","IT"]],
+    cus:[]},
+  "ANET":  {n:"Arista Networks",     s:"Networking",              r:"USA",         d:"PARTIAL_PUBLIC",
+    sup:[["Broadcom","AVGO","Merchant Silicon"],["Jabil","JBL","Contract Mfg"]],
+    cus:[["Microsoft","MSFT","Cloud"],["Meta","META","Cloud"],["Alphabet","GOOG","Cloud"]]},
+  "BHP":   {n:"BHP Group",           s:"Mining",                  r:"Australia",   d:"LIMITED_PUBLIC",
+    sup:[["Caterpillar","CAT","Mining Equip"],["Cummins","CMI","Engines"]],
+    cus:[]},
+  "ITX.MC":{n:"Inditex",             s:"Apparel Retail",          r:"Spain",       d:"LIMITED_PUBLIC",
+    sup:[],cus:[]},
+  "RELIANCE.NS":{n:"Reliance Industries",s:"Conglomerate/Energy", r:"India",       d:"UNKNOWN",
+    sup:[["Schlumberger","SLB","Oilfield Svcs"],["Nokia","NOK","Telecom"]],
+    cus:[]},
+  "VZ":    {n:"Verizon",             s:"Telecom",                 r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[["Ericsson","ERIC","Network Equip"],["Nokia","NOK","Network Equip"],["Apple","AAPL","Handsets"]],
+    cus:[]},
+  "TMO":   {n:"Thermo Fisher",       s:"Life Sciences Tools",     r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[["Danaher","DHR","Instruments"],["Waters Corp","WAT","Instruments"]],
+    cus:[]},
+  "NEE":   {n:"NextEra Energy",      s:"Utilities/Renewables",    r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[["GE Vernova","GEV","Grid Equip"],["Schneider Electric","SU.PA","Grid Equip"],["First Solar","FSLR","Solar Panels"]],
+    cus:[]},
+  "AMGN":  {n:"Amgen",               s:"Biotech",                 r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[],
+    cus:[["McKesson","MCK","Wholesale"],["Cardinal Health","CAH","Wholesale"]]},
+  "DIS":   {n:"Walt Disney",         s:"Media/Parks",             r:"USA",         d:"UNKNOWN",
+    sup:[["Amazon","AMZN","Cloud"],["Apple","AAPL","Platform"]],
+    cus:[]},
+  "SAN":   {n:"Santander",           s:"Banking",                 r:"Spain",       d:"UNKNOWN",
+    sup:[["IBM","IBM","IT"],["Oracle","ORCL","IT"],["Visa","V","Payments"]],
+    cus:[]},
+  "APH":   {n:"Amphenol",            s:"Electronic Components",   r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[],
+    cus:[["Apple","AAPL","Connectors"],["Tesla","TSLA","Auto Connectors"]]},
+  "TTE":   {n:"TotalEnergies",       s:"Oil & Gas",               r:"France",      d:"LIMITED_PUBLIC",
+    sup:[["Schlumberger","SLB","Oilfield Svcs"],["Halliburton","HAL","Oilfield Svcs"],["Baker Hughes","BKR","Oilfield Svcs"]],
+    cus:[]},
+  "T":     {n:"AT&T",                s:"Telecom",                 r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[["Ericsson","ERIC","Network Equip"],["Nokia","NOK","Network Equip"],["Apple","AAPL","Handsets"]],
+    cus:[]},
+  "SU.PA": {n:"Schneider Electric",  s:"Electrical Equipment",    r:"France",      d:"LIMITED_PUBLIC",
+    sup:[["Analog Devices","ADI","Semis"],["Texas Instruments","TXN","Semis"],["Amphenol","APH","Connectors"]],
+    cus:[]},
+  "ADI":   {n:"Analog Devices",      s:"Semiconductors",          r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[["TSMC","TSM","Foundry"],["ASML","ASML","Litho"],["Applied Materials","AMAT","Fab Equip"]],
+    cus:[["Apple","AAPL","Analog"],["Tesla","TSLA","Auto"]]},
+  "NVO":   {n:"Novo Nordisk",        s:"Pharma",                  r:"Denmark",     d:"LIMITED_PUBLIC",
+    sup:[],
+    cus:[["McKesson","MCK","Wholesale"],["Cardinal Health","CAH","Wholesale"],["CVS","CVS","Pharmacy"]]},
+  "TJX":   {n:"TJX Companies",       s:"Off-price Retail",        r:"USA",         d:"LIMITED_PUBLIC",
+    sup:[],cus:[]}
+};
+
+// ============================================================
+// RISK ENGINE
+// ============================================================
+const SECTOR_RISK = {
+  "Semiconductors/AI": 9, "Semiconductors/Foundry": 9, "Semiconductors/Memory": 8,
+  "Semiconductors/Infra": 8, "Semiconductor Equipment": 8, "Semiconductors": 8,
+  "Batteries": 8, "EV/Energy": 7, "Internet/Gaming": 7, "Internet/Cloud": 7,
+  "Internet/Advertising": 6, "Internet/Investment": 6, "E-commerce/Cloud": 6,
+  "Software/Cloud": 6, "Software/Data Analytics": 6, "Software": 5,
+  "Streaming": 5, "Networking": 7, "Electronic Components": 6,
+  "Consumer Technology": 6, "Autos": 6, "Aerospace/Defense": 7,
+  "Industrials/Aerospace": 6, "Industrials": 5, "Energy Equipment": 6,
+  "Electrical Equipment": 5, "Oil & Gas": 6, "Pharma/Diagnostics": 5,
+  "Pharma": 5, "Biotech": 6, "Healthcare": 4, "Healthcare/Insurance": 4,
+  "Life Sciences Tools": 5, "Media/Parks": 4, "Beverages": 3,
+  "Consumer Staples": 3, "Retail": 3, "Off-price Retail": 3, "Apparel Retail": 4,
+  "Restaurants": 3, "Luxury Goods": 4, "Beauty": 3, "Tobacco/Consumer": 3,
+  "Payments": 4, "Banking": 4, "Financials": 4, "Conglomerate/Insurance": 3,
+  "Conglomerate/Energy": 5, "Conglomerate": 3, "IT Services/Software": 5,
+  "Mining": 5, "Industrial Gases": 4, "Telecom": 4, "Utilities/Renewables": 3
+};
+const GEO_RISK = {
+  "China": 2.5, "Taiwan": 2, "Russia": 3, "Saudi Arabia": 1.5, "UAE": 1,
+  "South Korea": 1, "Japan": 0.5, "India": 0.5, "France": 0,
+  "Germany": 0, "Netherlands": 0, "Switzerland": 0, "Spain": 0,
+  "UK": 0, "USA": 0, "Canada": 0, "Australia": 0, "Denmark": 0
+};
+const DISC_RISK = { "UNKNOWN": 1, "LIMITED_PUBLIC": 0.5, "PARTIAL_PUBLIC": 0 };
+
+function getRiskScore(ticker) {
+  const co = DB[ticker];
+  if (!co) return 5;
+  const sr = SECTOR_RISK[co.s] || 5;
+  const gr = GEO_RISK[co.r] || 0;
+  const dr = DISC_RISK[co.d] || 0;
+  return Math.max(1, Math.min(10, Math.round(sr + gr + dr)));
+}
+function getRiskColor(score) {
+  const c = ['','#00ff88','#44ff66','#88ff44','#ccff00','#ffee00','#ffaa00','#ff7700','#ff4400','#ff2200','#ff0033'];
+  return c[Math.min(10,Math.max(1,score))];
+}
+function getRiskLabel(score) {
+  if (score<=2) return 'VERY LOW';
+  if (score<=4) return 'LOW';
+  if (score<=6) return 'MODERATE';
+  if (score<=8) return 'HIGH';
+  return 'CRITICAL';
+}
+
+// ============================================================
+// PRICE CACHE
+// ============================================================
+const prices = {};
+let lastRefresh = 0;
+const REFRESH_INTERVAL = 60000;
+let refreshTimer = null;
+
+// Collect all tickers
+function getAllTickers() {
+  const set = new Set(Object.keys(DB));
+  for (const co of Object.values(DB)) {
+    for (const s of co.sup) if (s[1]) set.add(s[1]);
+    for (const c of co.cus) if (c[1]) set.add(c[1]);
+  }
+  return [...set];
+}
+
+const PROXIES = [
+  url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+  url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+];
+let workingProxy = 0;
+
+async function fetchWithProxy(url, attempt=0) {
+  if (attempt >= PROXIES.length) return null;
+  const proxyUrl = PROXIES[(workingProxy + attempt) % PROXIES.length](url);
+  try {
+    const resp = await fetch(proxyUrl, {signal: AbortSignal.timeout(9000)});
+    if (!resp.ok) throw new Error('bad status');
+    const data = await resp.json();
+    if (data?.quoteResponse?.result) {
+      workingProxy = (workingProxy + attempt) % PROXIES.length; // remember what worked
+      return data;
+    }
+    throw new Error('no result');
+  } catch(e) {
+    return fetchWithProxy(url, attempt + 1);
+  }
+}
+
+async function fetchPrices(tickers) {
+  const batches = [];
+  for (let i = 0; i < tickers.length; i += 10) batches.push(tickers.slice(i, i+10));
+
+  for (const batch of batches) {
+    const syms = batch.join(',');
+    const url = `https://query1.finance.yahoo.com/v8/finance/quote?symbols=${encodeURIComponent(syms)}&fields=regularMarketPrice,regularMarketChange,regularMarketChangePercent,regularMarketVolume,regularMarketOpen,regularMarketPreviousClose,regularMarketDayHigh,regularMarketDayLow,marketCap,currency&formatted=false&corsDomain=finance.yahoo.com`;
+    try {
+      const data = await fetchWithProxy(url);
+      const quotes = data?.quoteResponse?.result || [];
+      for (const q of quotes) {
+        prices[q.symbol] = {
+          price: q.regularMarketPrice,
+          change: q.regularMarketChange,
+          changePct: q.regularMarketChangePercent,
+          volume: q.regularMarketVolume,
+          open: q.regularMarketOpen,
+          prevClose: q.regularMarketPreviousClose,
+          high: q.regularMarketDayHigh,
+          low: q.regularMarketDayLow,
+          marketCap: q.marketCap,
+          currency: q.currency || 'USD',
+          ts: Date.now()
+        };
+      }
+    } catch(e) { /* silent fail per batch */ }
+    await new Promise(r => setTimeout(r, 200));
+  }
+}
+
+function fmt(n, dec=2) {
+  if (n == null) return '—';
+  if (Math.abs(n) >= 1e12) return (n/1e12).toFixed(2)+'T';
+  if (Math.abs(n) >= 1e9)  return (n/1e9).toFixed(2)+'B';
+  if (Math.abs(n) >= 1e6)  return (n/1e6).toFixed(2)+'M';
+  if (Math.abs(n) >= 1000) return n.toLocaleString(undefined,{minimumFractionDigits:dec,maximumFractionDigits:dec});
+  return Number(n).toFixed(dec);
+}
+function fmtPrice(p) {
+  if (p == null) return '—';
+  if (p >= 1000) return p.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+  return p.toFixed(2);
+}
+function priceDisplay(ticker) {
+  const p = prices[ticker];
+  if (!p || !p.price) return {price:'Loading…',change:'',cls:'flat'};
+  const cls = p.change > 0 ? 'up' : p.change < 0 ? 'down' : 'flat';
+  const sign = p.change > 0 ? '+' : '';
+  return {
+    price: fmtPrice(p.price),
+    change: `${sign}${p.change?.toFixed(2)} (${sign}${p.changePct?.toFixed(2)}%)`,
+    cls
+  };
+}
+
+// ============================================================
+// RISK BAR RENDERER
+// ============================================================
+function renderRiskBar(score, size='sm') {
+  const color = getRiskColor(score);
+  const cls = size === 'sm' ? 'rb' : 'rbl';
+  const sz = size === 'sm' ? '' : '';
+  let html = `<div class="risk-bar${size==='lg'?' risk-bar-lg':''}">`;
+  for (let i=1; i<=10; i++) {
+    const filled = i <= score;
+    html += `<div class="${cls}" style="${filled ? `background:${color};box-shadow:0 0 4px ${color}40` : ''}"></div>`;
+  }
+  html += '</div>';
+  return html;
+}
+
+// ============================================================
+// SIDEBAR BUILD
+// ============================================================
+let currentTicker = null;
+const tickers = Object.keys(DB);
+
+function buildSidebar(filter='') {
+  const list = document.getElementById('company-list');
+  const fl = filter.toLowerCase();
+  const filtered = tickers.filter(t => {
+    const co = DB[t];
+    return !fl || t.toLowerCase().includes(fl) || co.n.toLowerCase().includes(fl) || co.s.toLowerCase().includes(fl);
+  });
+  document.getElementById('company-count').textContent = filtered.length;
+  list.innerHTML = filtered.map(t => {
+    const co = DB[t];
+    const pd = priceDisplay(t);
+    const score = getRiskScore(t);
+    return `<div class="co-item${t===currentTicker?' active':''}" data-ticker="${t}" onclick="showCompany('${t}')">
+      <div class="co-risk">
+        ${renderRiskBar(score,'sm')}
+        <span class="risk-label" style="color:${getRiskColor(score)}">${score}</span>
+      </div>
+      <div class="co-left">
+        <span class="co-ticker">${t}</span>
+        <span class="co-name">${co.n}</span>
+      </div>
+      <div class="co-right">
+        <span class="co-price">${pd.price}</span>
+        <span class="co-change ${pd.cls}">${pd.change}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ============================================================
+// COMPANY DETAIL VIEW
+// ============================================================
+let activeTab = 'suppliers';
+
+function showCompany(ticker) {
+  currentTicker = ticker;
+  document.getElementById('welcome').style.display = 'none';
+  const view = document.getElementById('co-view');
+  view.style.display = 'block';
+  renderDetail();
+  buildSidebar(document.getElementById('search').value);
+}
+
+function renderDetail() {
+  const ticker = currentTicker;
+  const co = DB[ticker];
+  if (!co) return;
+  const pd = priceDisplay(ticker);
+  const score = getRiskScore(ticker);
+  const scoreColor = getRiskColor(score);
+  const p = prices[ticker] || {};
+  // Supply chain avg risk
+  const allChain = [...co.sup.map(s=>s[1]), ...co.cus.map(c=>c[1])].filter(t=>DB[t]);
+  const chainRisk = allChain.length ? Math.round(allChain.reduce((a,t)=>a+getRiskScore(t),0)/allChain.length) : null;
+
+  const view = document.getElementById('co-view');
+  view.innerHTML = `
+    <div id="co-header">
+      <div>
+        <div class="co-detail-name">${co.n}</div>
+        <div class="co-detail-ticker">${ticker}</div>
+        <div class="co-badges">
+          <span class="badge badge-sector">${co.s}</span>
+          <span class="badge badge-region">${co.r}</span>
+          <span class="badge badge-disc-${co.d}">${co.d.replace('_',' ')}</span>
+        </div>
+      </div>
+    </div>
+    <div class="price-block">
+      <div>
+        <div class="price-label">LAST PRICE</div>
+        <div class="price-main ${pd.cls}">${pd.price} <span class="price-currency">${p.currency||'USD'}</span></div>
+      </div>
+      <div>
+        <div class="price-label">CHANGE</div>
+        <div class="price-change ${pd.cls}">${pd.change}</div>
+      </div>
+    </div>
+    <div class="metrics-grid">
+      <div class="metric-card"><div class="metric-label">Market Cap</div><div class="metric-value">${fmt(p.marketCap)}</div></div>
+      <div class="metric-card"><div class="metric-label">Volume</div><div class="metric-value">${fmt(p.volume,0)}</div></div>
+      <div class="metric-card"><div class="metric-label">Day High</div><div class="metric-value">${fmtPrice(p.high)}</div></div>
+      <div class="metric-card"><div class="metric-label">Day Low</div><div class="metric-value">${fmtPrice(p.low)}</div></div>
+      <div class="metric-card"><div class="metric-label">Open</div><div class="metric-value">${fmtPrice(p.open)}</div></div>
+      <div class="metric-card"><div class="metric-label">Prev Close</div><div class="metric-value">${fmtPrice(p.prevClose)}</div></div>
+      <div class="metric-card"><div class="metric-label">Currency</div><div class="metric-value">${p.currency||'—'}</div></div>
+      <div class="metric-card"><div class="metric-label">Last Update</div><div class="metric-value">${p.ts ? new Date(p.ts).toLocaleTimeString() : '—'}</div></div>
+    </div>
+    <div class="risk-section">
+      <div class="risk-section-title">⬡ RISK ANALYSIS</div>
+      <div class="risk-row">
+        <span class="risk-row-label">Company Risk Score</span>
+        ${renderRiskBar(score,'lg')}
+        <span class="risk-score-lg" style="color:${scoreColor}">${score}</span>
+        <span style="font-size:11px;color:${scoreColor}">${getRiskLabel(score)}</span>
+      </div>
+      ${chainRisk != null ? `<div class="risk-row">
+        <span class="risk-row-label">Supply Chain Avg Risk</span>
+        ${renderRiskBar(chainRisk,'lg')}
+        <span class="risk-score-lg" style="color:${getRiskColor(chainRisk)}">${chainRisk}</span>
+        <span style="font-size:11px;color:${getRiskColor(chainRisk)}">${getRiskLabel(chainRisk)}</span>
+      </div>` : ''}
+      <div class="risk-factors">
+        <div class="risk-factor">SECTOR <span>${SECTOR_RISK[co.s]||5}</span></div>
+        <div class="risk-factor">GEO <span>+${GEO_RISK[co.r]||0}</span></div>
+        <div class="risk-factor">DISCLOSURE <span>+${DISC_RISK[co.d]||0}</span></div>
+        <div class="risk-factor">REGION <span>${co.r}</span></div>
+      </div>
+    </div>
+    <div class="tabs">
+      <div class="tab${activeTab==='suppliers'?' active':''}" onclick="switchTab('suppliers')">SUPPLIERS (${co.sup.length})</div>
+      <div class="tab${activeTab==='customers'?' active':''}" onclick="switchTab('customers')">CUSTOMERS (${co.cus.length})</div>
+      <div class="tab${activeTab==='sec'?' active':''}" onclick="switchTab('sec')">SEC FILINGS</div>
+    </div>
+    <div id="tab-suppliers" class="tab-panel${activeTab==='suppliers'?' active':''}">
+      ${renderNodes(co.sup, 'SUPPLIER')}
+    </div>
+    <div id="tab-customers" class="tab-panel${activeTab==='customers'?' active':''}">
+      ${renderNodes(co.cus, 'CUSTOMER')}
+    </div>
+    <div id="tab-sec" class="tab-panel${activeTab==='sec'?' active':''}">
+      ${renderSEC(ticker, co)}
+    </div>
+  `;
+}
+
+function renderNodes(arr, type) {
+  if (!arr.length) return `<div class="empty-state">NO ${type} DATA AVAILABLE</div>`;
+  return `<div class="sc-grid">${arr.map(([name, ticker, role]) => {
+    const inDb = !!DB[ticker];
+    const pd = ticker ? priceDisplay(ticker) : {price:'N/A',change:'',cls:'flat'};
+    const score = ticker ? getRiskScore(ticker) : 5;
+    const scoreColor = getRiskColor(score);
+    return `<div class="sc-node${inDb?' in-db':' no-db'}" ${inDb?`onclick="showCompany('${ticker}')"`:''}>
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <span class="sc-node-ticker">${ticker||'—'}</span>
+        <span class="sc-node-role">${role}</span>
+      </div>
+      <div class="sc-node-name">${name}</div>
+      <div style="display:flex;align-items:baseline;gap:6px">
+        <span class="sc-node-price ${pd.cls}">${pd.price}</span>
+        <span class="sc-node-change ${pd.cls}">${pd.change}</span>
+      </div>
+      <div class="sc-node-risk-row">
+        ${renderRiskBar(score,'sm')}
+        <span class="sc-node-risk-label" style="color:${scoreColor}">RISK ${score} — ${getRiskLabel(score)}</span>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function renderSEC(ticker, co) {
+  const t = ticker.replace('.','-');
+  const searchTicker = encodeURIComponent(ticker);
+  const discMap = {
+    PARTIAL_PUBLIC: {label:'PARTIAL PUBLIC',color:'#00ff88',desc:'Some supplier/customer percentages are disclosed in public filings.'},
+    LIMITED_PUBLIC: {label:'LIMITED PUBLIC',color:'#ffaa00',desc:'Supply chain mentioned but percentages/names not fully disclosed.'},
+    UNKNOWN:        {label:'NOT DISCLOSED',color:'#ff3355',desc:'No meaningful supply chain disclosure found in public filings.'}
+  };
+  const disc = discMap[co.d] || discMap.UNKNOWN;
+  return `
+  <div class="sec-disc-banner">
+    Disclosure Status: <strong style="color:${disc.color}">${disc.label}</strong> — ${disc.desc}
+  </div>
+  <div class="sec-section">
+    <div class="sec-item">
+      <div class="sec-item-left">
+        <div class="sec-filing-type">10-K Annual Report</div>
+        <div class="sec-filing-desc">Full annual filing — search for supply chain, supplier, customer references</div>
+      </div>
+      <a class="sec-btn" href="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&company=${encodeURIComponent(co.n)}&type=10-K&dateb=&owner=include&count=10" target="_blank">EDGAR 10-K →</a>
+    </div>
+    <div class="sec-item">
+      <div class="sec-item-left">
+        <div class="sec-filing-type">EDGAR Full-Text Search</div>
+        <div class="sec-filing-desc">Search all filings for "${co.n}" supply chain keywords</div>
+      </div>
+      <a class="sec-btn" href="https://efts.sec.gov/LATEST/search-index?q=%22supply+chain%22+%22${encodeURIComponent(co.n)}%22&dateRange=custom&startdt=2022-01-01&forms=10-K" target="_blank">FULL-TEXT →</a>
+    </div>
+    <div class="sec-item">
+      <div class="sec-item-left">
+        <div class="sec-filing-type">EDGAR Company Search</div>
+        <div class="sec-filing-desc">All SEC filings for ${co.n}</div>
+      </div>
+      <a class="sec-btn" href="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&company=${encodeURIComponent(co.n)}&CIK=&type=&dateb=&owner=include&count=40&search_text=" target="_blank">ALL FILINGS →</a>
+    </div>
+    <div class="sec-item">
+      <div class="sec-item-left">
+        <div class="sec-filing-type">Supply Chain Keywords</div>
+        <div class="sec-filing-desc">EDGAR search: "supplier concentration" "material customer" "${ticker}"</div>
+      </div>
+      <a class="sec-btn" href="https://efts.sec.gov/LATEST/search-index?q=%22${searchTicker}%22+%22supply+chain%22&forms=10-K,10-Q" target="_blank">KEYWORD SEARCH →</a>
+    </div>
+    <div class="sec-item">
+      <div class="sec-item-left">
+        <div class="sec-filing-type">8-K Current Reports</div>
+        <div class="sec-filing-desc">Material events, supply chain disruption disclosures</div>
+      </div>
+      <a class="sec-btn" href="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&company=${encodeURIComponent(co.n)}&type=8-K&dateb=&owner=include&count=10" target="_blank">8-K FILINGS →</a>
+    </div>
+  </div>`;
+}
+
+function switchTab(tab) {
+  activeTab = tab;
+  renderDetail();
+}
+
+// ============================================================
+// TICKER TAPE
+// ============================================================
+function buildTape() {
+  const tape = document.getElementById('tape-inner');
+  const items = tickers.map(t => {
+    const pd = priceDisplay(t);
+    return `<div class="tape-item">
+      <span class="tape-ticker">${t}</span>
+      <span class="tape-price ${pd.cls}">${pd.price}</span>
+      <span class="${pd.cls}">${pd.change}</span>
+    </div>`;
+  }).join('');
+  tape.innerHTML = items + items; // doubled for seamless loop
+}
+
+// ============================================================
+// CLOCK
+// ============================================================
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.toUTCString().split(' ')[4] + ' UTC';
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ============================================================
+// AUTOCOMPLETE
+// ============================================================
+const searchEl = document.getElementById('search');
+const acEl = document.getElementById('autocomplete');
+
+searchEl.addEventListener('input', () => {
+  const val = searchEl.value.toLowerCase();
+  buildSidebar(val);
+  if (!val) { acEl.style.display='none'; return; }
+  const matches = tickers.filter(t => {
+    const co = DB[t];
+    return t.toLowerCase().includes(val) || co.n.toLowerCase().includes(val);
+  }).slice(0, 8);
+  if (!matches.length) { acEl.style.display='none'; return; }
+  acEl.style.display = 'block';
+  acEl.innerHTML = matches.map(t => `<div class="ac-item" onclick="selectAC('${t}')">
+    <span class="ac-ticker">${t}</span>
+    <span class="ac-name">${DB[t].n}</span>
+  </div>`).join('');
+});
+searchEl.addEventListener('blur', () => setTimeout(()=>acEl.style.display='none', 200));
+function selectAC(t) { searchEl.value=''; acEl.style.display='none'; buildSidebar(''); showCompany(t); }
+
+// ============================================================
+// MAIN PRICE REFRESH LOOP
+// ============================================================
+let refreshProgress = 0;
+let refreshProgressTimer = null;
+
+function animateRefreshBar() {
+  refreshProgress = 0;
+  const bar = document.getElementById('refresh-bar');
+  bar.style.width = '0%';
+  clearInterval(refreshProgressTimer);
+  refreshProgressTimer = setInterval(() => {
+    refreshProgress += 100 / (REFRESH_INTERVAL / 1000);
+    bar.style.width = Math.min(refreshProgress, 100) + '%';
+  }, 1000);
+}
+
+async function fullRefresh() {
+  const allTickers = getAllTickers();
+  await fetchPrices(allTickers);
+  buildSidebar(searchEl.value);
+  buildTape();
+  if (currentTicker) renderDetail();
+  lastRefresh = Date.now();
+  animateRefreshBar();
+}
+
+// Initial load
+(async () => {
+  buildSidebar();
+  buildTape();
+  await fullRefresh();
+  setInterval(fullRefresh, REFRESH_INTERVAL);
+})();
+</script>
+</body>
+</html>
